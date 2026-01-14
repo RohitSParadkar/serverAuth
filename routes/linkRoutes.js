@@ -4,7 +4,7 @@ const sqlDb = require("../sql/sqlite");
 const TempLink = require("../mongo/TempLink");
 
 const router = express.Router();
-const TTL_MS = 60 * 1000;
+const TTL_MS = 10 * 1000;
 
 /**
  * MAIN PAGE
