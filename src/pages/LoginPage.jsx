@@ -20,6 +20,9 @@ export default function LoginPage() {
 
       localStorage.setItem("jwt", res.data.token);
       localStorage.setItem("username", res.data.username);
+       // ✅ Store auth state
+      localStorage.setItem("jwt", res.data.token);
+      localStorage.setItem("isLogin", "true");
 
       navigate("/"); // go to MainPage
     } catch (err) {

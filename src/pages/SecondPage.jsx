@@ -1,5 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import InfoCards from "../components/InfoCards";
 import SalesChart from "../components/SalesChart";
@@ -11,47 +12,65 @@ export default function SecondPage() {
   const [params] = useSearchParams();
   const activated = params.get("activated");
 
-  // Check if user is logged in
-  const jwtToken = localStorage.getItem("jwt");
+  // 🔥 Local auth mirror (THIS IS THE FIX)
+  const [auth, setAuth] = useState({
+    jwt: localStorage.getItem("jwt"),
+    isLogin: localStorage.getItem("isLogin")
+  });
 
-  // Show invalid immediately if activated flag missing or JWT missing
-  if (activated !== "true" || !jwtToken) {
+  // 🔁 Poll localStorage every 500ms
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAuth({
+        jwt: localStorage.getItem("jwt"),
+        isLogin: localStorage.getItem("isLogin")
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ❌ Always render something
+  if (
+    activated !== "true" ||
+    auth.isLogin !== "true" ||
+    !auth.jwt
+  ) {
     return (
       <div style={{ padding: "2rem", color: "red" }}>
-        ❌ Link invalid or user logged out
+        ❌ Link expired or user logged out
       </div>
     );
   }
 
-  // Validate temp link from backend
-  const validateToken = async () => {
-    const res = await axios.get(`${API}/validate/${id}`);
+  // 🔐 Backend validation
+  const validateLink = async () => {
+    const res = await axios.get(`${API}/validate/${id}`, {
+      headers: { Authorization: `Bearer ${auth.jwt}` }
+    });
     return res.data;
   };
 
   const { isLoading, isError, data } = useQuery({
-    queryKey: ["validate-token", id, jwtToken],
-    queryFn: validateToken,
-    enabled: !!jwtToken && activated === "true",
+    queryKey: ["validate-link", id, auth.isLogin],
+    queryFn: validateLink,
     retry: false,
-    refetchInterval: 5000, // optional: recheck every 5 sec
+    refetchInterval: 3000
   });
 
-  // While validating
   if (isLoading) {
     return <div style={{ padding: "2rem" }}>Validating link...</div>;
   }
 
-  // If validation failed or token invalid → show invalid message
   if (isError || !data?.valid) {
     return (
       <div style={{ padding: "2rem", color: "red" }}>
-        ❌ Link invalid or expired
+        ❌ Link expired or invalid
       </div>
     );
   }
 
-  // ✅ Render dashboard if valid
+  // ✅ VALID
   return (
     <div style={{ padding: "2rem" }}>
       <h2>📊 Sales Dashboard</h2>
